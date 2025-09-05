@@ -70,8 +70,8 @@ enum MatchType {
 
 #[wasm_bindgen]
 pub struct VanitySearcher {
-    base_sha: Sha256,
-    owner_pubkey: Vec<u8>,
+    base_pubkey: [u8; 32],
+    owner_pubkey: [u8; 32],
     match_type: MatchType,
     case_insensitive: bool,
     count: u64,
@@ -90,8 +90,6 @@ impl VanitySearcher {
         case_insensitive: bool,
         count_offset: u64,
     ) -> VanitySearcher {
-        let base_sha = Sha256::new().chain_update(base_pubkey);
-
         let match_type = match (prefix, suffix) {
             (Some(p), Some(s)) => {
                 let prefix_str = if case_insensitive {
@@ -126,8 +124,8 @@ impl VanitySearcher {
         };
 
         VanitySearcher {
-            base_sha,
-            owner_pubkey: owner_pubkey.to_vec(),
+            base_pubkey: base_pubkey.try_into().unwrap(),
+            owner_pubkey: owner_pubkey.try_into().unwrap(),
             match_type,
             case_insensitive,
             count: 0,
@@ -138,6 +136,8 @@ impl VanitySearcher {
 
     #[wasm_bindgen]
     pub fn search_batch(&mut self, batch_size: u32) -> Option<VanityResult> {
+        let mut base_sha = Sha256::new();
+
         for _ in 0..batch_size {
             if self.should_exit {
                 return None;
@@ -145,13 +145,10 @@ impl VanitySearcher {
 
             let seed = generate_seed_from_counter(self.count + self.count_offset);
 
-            let pubkey_bytes: [u8; 32] = self
-                .base_sha
-                .clone()
-                .chain_update(seed)
-                .chain_update(&self.owner_pubkey)
-                .finalize()
-                .into();
+            base_sha.update(&self.base_pubkey); // Cheaper to rehash that clone the hasher
+            base_sha.update(seed);
+            base_sha.update(&self.owner_pubkey);
+            let pubkey_bytes: [u8; 32] = base_sha.finalize_reset().into();
 
             let mut encoded_buf = [0u8; five8::BASE58_ENCODED_32_MAX_LEN];
             let encoded_len = five8::encode_32(&pubkey_bytes, &mut encoded_buf);

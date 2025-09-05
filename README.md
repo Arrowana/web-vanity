@@ -1,1 +1,1 @@
-https://github.com/cavemanloverboy/vanity but web
+Port of https://github.com/cavemanloverboy/vanity on the WEB

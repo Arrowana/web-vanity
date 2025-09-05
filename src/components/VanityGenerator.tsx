@@ -86,6 +86,25 @@ export const VanityGenerator = () => {
 
       clearInterval(timerId);
 
+      // Verify the result using PublicKey.createWithSeed
+      try {
+        const verifiedPubkey = await PublicKey.createWithSeed(
+          baseKeyPair.publicKey,
+          vanityResult.seed,
+          ownerPubkey
+        );
+        
+        if (verifiedPubkey.toBase58() !== vanityResult.address) {
+          throw new Error(`Verification failed: expected ${vanityResult.address}, got ${verifiedPubkey.toBase58()}`);
+        }
+        
+        console.log("✅ Vanity address verified successfully!");
+      } catch (verifyError) {
+        console.error("❌ Verification failed:", verifyError);
+        setError(verifyError instanceof Error ? verifyError.message : "Address verification failed");
+        return;
+      }
+
       setProgress(100);
       setResult(vanityResult);
     } catch (err) {

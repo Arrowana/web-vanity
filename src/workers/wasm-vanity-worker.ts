@@ -45,7 +45,7 @@ self.onmessage = async function (e) {
       countOffset
     );
 
-    const batchSize = 50_000; // Process in batches to allow progress reporting
+    const batchSize = 250_000; // Process in batches to allow progress reporting
 
     while (!shouldStop) {
       const result = searcher.search_batch(batchSize);

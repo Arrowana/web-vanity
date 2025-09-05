@@ -136,7 +136,7 @@ impl VanitySearcher {
 
     #[wasm_bindgen]
     pub fn search_batch(&mut self, batch_size: u32) -> Option<VanityResult> {
-        let mut base_sha = Sha256::new();
+        let base_sha = Sha256::new().chain_update(self.base_pubkey);
 
         for _ in 0..batch_size {
             if self.should_exit {
@@ -145,10 +145,10 @@ impl VanitySearcher {
 
             let seed = generate_seed_from_counter(self.count + self.count_offset);
 
-            base_sha.update(&self.base_pubkey); // Cheaper to rehash that clone the hasher
-            base_sha.update(seed);
-            base_sha.update(&self.owner_pubkey);
-            let pubkey_bytes: [u8; 32] = base_sha.finalize_reset().into();
+            let mut hasher = base_sha.clone();
+            hasher.update(seed);
+            hasher.update(&self.owner_pubkey);
+            let pubkey_bytes: [u8; 32] = hasher.finalize().into();
 
             let mut encoded_buf = [0u8; five8::BASE58_ENCODED_32_MAX_LEN];
             let encoded_len = five8::encode_32(&pubkey_bytes, &mut encoded_buf);
